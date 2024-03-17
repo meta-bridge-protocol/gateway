@@ -30,7 +30,11 @@ contract Escrow is Initializable, AccessControlUpgradeable {
 		__Escrow_init_unchained(_portalAddress, _deusAddress, _thresholdAmount);
 	}
 
-	function __Escrow_init_unchained(address _portalAddress, address _deusAddress, uint256 _thresholdAmount) internal onlyInitializing {
+	function __Escrow_init_unchained(
+		address _portalAddress,
+		address _deusAddress,
+		uint256 _thresholdAmount
+	) internal onlyInitializing {
 		portalAddress = _portalAddress;
 		deusAddress = _deusAddress;
 		thresholdAmount = _thresholdAmount;
@@ -40,7 +44,7 @@ contract Escrow is Initializable, AccessControlUpgradeable {
 
 	function depositToPortal() external onlyRole(DEPOSIT_ROLE) {
 		uint256 portalBalance = IERC20(deusAddress).balanceOf(portalAddress);
-		require(portalBalance <= thresholdAmount, "Escrow: Portal balance exceeds threshold, cannot deposit");
+		require(portalBalance < thresholdAmount, "Escrow: Portal balance exceeds threshold, cannot deposit");
 
 		uint256 requiredAmount = thresholdAmount - portalBalance;
 		uint256 escrowBalance = IERC20(deusAddress).balanceOf(address(this));
@@ -54,7 +58,7 @@ contract Escrow is Initializable, AccessControlUpgradeable {
 
 	function withdrawFromPortal() external onlyRole(WITHDRAW_ROLE) {
 		uint256 portalBalance = IERC20(deusAddress).balanceOf(portalAddress);
-		require(portalBalance >= thresholdAmount, "Escrow: Portal balance below threshold, cannot withdraw");
+		require(portalBalance > thresholdAmount, "Escrow: Portal balance below threshold, cannot withdraw");
 
 		uint256 requiredAmount = portalBalance - thresholdAmount;
 		IPortal(portalAddress).withdraw(requiredAmount, 0);
