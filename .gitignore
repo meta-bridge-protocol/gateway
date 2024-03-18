@@ -11,3 +11,4 @@ artifacts
 pnpm-lock.yaml
 .vscode/
 typechain-types/
+yarn.lock
