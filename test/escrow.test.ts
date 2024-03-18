@@ -45,8 +45,8 @@ describe("Escrow", () => {
 		await axlToken.mint(await escrow.getAddress(), 1000)
 		await realToken.mint(await escrow.getAddress(), 1000)
 
-		await escrow.grantRole(await escrow.DEPOSIT_ROLE(), await user1.getAddress())
-		await escrow.grantRole(await escrow.WITHDRAW_ROLE(), await user1.getAddress())
+		await escrow.grantRole(await escrow.DEPOSITOR_ROLE(), await user1.getAddress())
+		await escrow.grantRole(await escrow.WITHDRAWER_ROLE(), await user1.getAddress())
 	})
 
 	describe("depositToPortal function", () => {
@@ -57,24 +57,18 @@ describe("Escrow", () => {
 		it("should fail to deposit if the portal balance exceeds the threshold", async () => {
 			await escrow.connect(user1).depositToPortal()
 			await expect(escrow.connect(user1).depositToPortal()).to.be.revertedWith(
-				"Escrow: Portal balance exceeds threshold, cannot deposit"
+				"Escrow: Portal balance exceeds the threshold"
 			)
 		})
 
-		it("should fail to deposit if the escrow balance is under the required amount", async () => {
+		it("should deposit as much as possible if the escrow balance is under the required amount", async () => {
 			await escrow.setThresholdAmount(3000)
-			await expect(escrow.connect(user1).depositToPortal()).to.be.revertedWith(
-				"Escrow: Insufficient Escrow balance for required deposit"
-			)
+			await expect(escrow.connect(user1).depositToPortal()).to.emit(escrow, "DepositToPortal")
+				.withArgs(1000, 3000)
 		})
 
 		it("should fail if the caller does not have DEPOSIT_ROLE", async () => {
-			await expect(escrow.connect(user2).depositToPortal()).to.be.revertedWith(
-				"AccessControl: account " +
-					(await user2.getAddress()).toLowerCase() +
-					" is missing role " +
-					(await escrow.DEPOSIT_ROLE())
-			)
+			await expect(escrow.connect(user2).depositToPortal()).to.be.revertedWithCustomError(gateway, "AccessControlUnauthorizedAccount")
 		})
 	})
 
@@ -87,17 +81,12 @@ describe("Escrow", () => {
 
 		it("should fail to withdraw if the portal balance is below the threshold", async () => {
 			await expect(escrow.connect(user1).withdrawFromPortal()).to.be.revertedWith(
-				"Escrow: Portal balance below threshold, cannot withdraw"
+				"Escrow: Portal balance is below the threshold"
 			)
 		})
 
 		it("should fail if the caller does not have WITHDRAW_ROLE", async () => {
-			await expect(escrow.connect(user2).withdrawFromPortal()).to.be.revertedWith(
-				"AccessControl: account " +
-					(await user2.getAddress()).toLowerCase() +
-					" is missing role " +
-					(await escrow.WITHDRAW_ROLE())
-			)
+			await expect(escrow.connect(user2).withdrawFromPortal()).to.be.revertedWithCustomError(gateway, "AccessControlUnauthorizedAccount")
 		})
 	})
 
@@ -110,31 +99,21 @@ describe("Escrow", () => {
 
 		it("should fail if the caller is not DEFAULT_ADMIN_ROLE", async () => {
 			const newThreshold = 2000
-			await expect(escrow.connect(user1).setThresholdAmount(newThreshold)).to.be.revertedWith(
-				"AccessControl: account " +
-					(await user1.getAddress()).toLowerCase() +
-					" is missing role " +
-					(await escrow.DEFAULT_ADMIN_ROLE())
-			)
+			await expect(escrow.connect(user1).setThresholdAmount(newThreshold)).to.be.revertedWithCustomError(gateway, "AccessControlUnauthorizedAccount")
 		})
 	})
 
 	describe("withdraw function", () => {
 		it("should allow DEFAULT_ADMIN_ROLE to withdraw tokens", async () => {
 			const amount = 1000
-			await escrow.connect(owner).withdraw(await realToken.getAddress(), await owner.getAddress(), amount)
+			await escrow.connect(owner).withdrawERC20(await realToken.getAddress(), await owner.getAddress(), amount)
 		})
 
 		it("should fail if the caller is not DEFAULT_ADMIN_ROLE", async () => {
 			const amount = 1000
 			await expect(
-				escrow.connect(user1).withdraw(await realToken.getAddress(), await user1.getAddress(), amount)
-			).to.be.revertedWith(
-				"AccessControl: account " +
-					(await user1.getAddress()).toLowerCase() +
-					" is missing role " +
-					(await escrow.DEFAULT_ADMIN_ROLE())
-			)
+				escrow.connect(user1).withdrawERC20(await realToken.getAddress(), await user1.getAddress(), amount)
+			).to.be.revertedWithCustomError(gateway, "AccessControlUnauthorizedAccount")
 		})
 	})
 })

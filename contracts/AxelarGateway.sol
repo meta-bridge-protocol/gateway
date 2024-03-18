@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /// @title AxelarGateway
 /// @author DEUS Finance
@@ -46,7 +46,7 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 		require(axlToken_ != address(0), "AxelarGateway: AXL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
 		require(realToken_ != address(0), "AxelarGateway: REAL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
 
-		_setupRole(DEFAULT_ADMIN_ROLE, admin);
+		_grantRole(DEFAULT_ADMIN_ROLE, admin);
 
 		axlToken = axlToken_;
 		realToken = realToken_;

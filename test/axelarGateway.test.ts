@@ -36,7 +36,7 @@ describe("AxelarGateway", () => {
 		it("should pause and unpause the contract", async () => {
 			await gateway.connect(owner).grantRole(await gateway.PAUSER_ROLE(), await user.getAddress())
 			await gateway.connect(user).pause()
-			await expect(gateway.connect(user).swapToReal(1000)).to.be.revertedWith("Pausable: paused")
+			await expect(gateway.connect(user).swapToReal(1000)).to.be.revertedWithCustomError(gateway, "EnforcedPause")
 
 			await gateway.connect(owner).grantRole(await gateway.UNPAUSER_ROLE(), await user.getAddress())
 			await gateway.connect(user).unpause()
@@ -46,22 +46,11 @@ describe("AxelarGateway", () => {
 		})
 
 		it("should not allow non-pauser to pause or unpause", async () => {
-			await expect(gateway.connect(user).pause()).to.be.revertedWith(
-				"AccessControl: account " +
-					(await user.getAddress()).toLowerCase() +
-					" is missing role " +
-					(await gateway.PAUSER_ROLE())
-			)
-
+			await expect(gateway.connect(user).pause()).to.be.revertedWithCustomError(gateway, "AccessControlUnauthorizedAccount")
 			await gateway.connect(owner).grantRole(await gateway.PAUSER_ROLE(), await user.getAddress())
 			await gateway.connect(user).pause()
 
-			await expect(gateway.connect(recipient).unpause()).to.be.revertedWith(
-				"AccessControl: account " +
-					(await recipient.getAddress()).toLowerCase() +
-					" is missing role " +
-					(await gateway.UNPAUSER_ROLE())
-			)
+			await expect(gateway.connect(recipient).unpause()).to.be.revertedWithCustomError(gateway, "AccessControlUnauthorizedAccount")
 		})
 	})
 
@@ -112,9 +101,7 @@ describe("AxelarGateway", () => {
 		it("should not allow swapping if contract has insufficient balance", async () => {
 			const amount = 10000
 			await axlToken.connect(user).approve(await gateway.getAddress(), amount)
-			await expect(gateway.connect(user).swapToReal(amount)).to.be.revertedWith(
-				"ERC20: transfer amount exceeds balance"
-			)
+			await expect(gateway.connect(user).swapToReal(amount)).to.be.revertedWithCustomError(axlToken, "ERC20InsufficientBalance")
 		})
 	})
 	describe("deposit & withdraw functionality", () => {
