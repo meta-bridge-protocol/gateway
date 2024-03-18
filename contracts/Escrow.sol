@@ -24,9 +24,10 @@ contract Escrow is Initializable, AccessControlEnumerableUpgradeable {
 	event SetThresholdAmount(uint256 thresholdAmount);
 	event WithdrawERC20(address token, address to, uint256 amount);
 
-	function initialize(address _portalAddress, address _deusAddress, uint256 _thresholdAmount) public initializer {
+	function initialize(address _portalAddress, address _deusAddress, address _msigAddress, uint256 _thresholdAmount) public initializer {
 		__AccessControl_init();
 
+		msigAddress = _msigAddress;
 		portalAddress = _portalAddress;
 		deusAddress = _deusAddress;
 		thresholdAmount = _thresholdAmount;
@@ -64,9 +65,9 @@ contract Escrow is Initializable, AccessControlEnumerableUpgradeable {
 		emit SetThresholdAmount(_thresholdAmount);
 	}
 
-	function withdrawERC20(address token, address to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		IERC20(token).transfer(to, amount);
+	function withdrawERC20(address token, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		IERC20(token).transfer(msigAddress, amount);
 
-		emit WithdrawERC20(token, to, amount);
+		emit WithdrawERC20(token, msigAddress, amount);
 	}
 }
