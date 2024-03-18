@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 interface IPortal {
 	function withdraw(uint256 realTokenAmount, uint256 axlTokenAmount) external;
@@ -14,22 +14,29 @@ interface IPortal {
 contract Escrow is Initializable, AccessControlEnumerableUpgradeable {
 	address public portalAddress;
 	address public deusAddress;
+	address public msigAddress;
 	uint256 public thresholdAmount;
 
 	bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 	bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
+	bytes32 public constant ASSET_MANAGER_ROLE = keccak256("ASSET_MANAGER_ROLE");
 
 	event DepositToPortal(uint256 amount, uint256 thresholdAmount);
 	event WithdrawFromPortal(uint256 amount, uint256 thresholdAmount);
 	event SetThresholdAmount(uint256 thresholdAmount);
 	event WithdrawERC20(address token, address to, uint256 amount);
 
-	function initialize(address _portalAddress, address _deusAddress, address _msigAddress, uint256 _thresholdAmount) public initializer {
+	function initialize(
+		address _portalAddress,
+		address _deusAddress,
+		address _msigAddress,
+		uint256 _thresholdAmount
+	) public initializer {
 		__AccessControl_init();
 
-		msigAddress = _msigAddress;
 		portalAddress = _portalAddress;
 		deusAddress = _deusAddress;
+		msigAddress = _msigAddress;
 		thresholdAmount = _thresholdAmount;
 
 		_grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -65,7 +72,7 @@ contract Escrow is Initializable, AccessControlEnumerableUpgradeable {
 		emit SetThresholdAmount(_thresholdAmount);
 	}
 
-	function withdrawERC20(address token, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+	function withdrawERC20(address token, uint256 amount) external onlyRole(ASSET_MANAGER_ROLE) {
 		IERC20(token).transfer(msigAddress, amount);
 
 		emit WithdrawERC20(token, msigAddress, amount);
