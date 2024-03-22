@@ -6,75 +6,75 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 
 interface IPortal {
-    function withdraw(uint256 realTokenAmount, uint256 axlTokenAmount) external;
+	function withdraw(uint256 realTokenAmount, uint256 axlTokenAmount) external;
 
-    function deposit(uint256 realTokenAmount, uint256 axlTokenAmount) external;
+	function deposit(uint256 realTokenAmount, uint256 axlTokenAmount) external;
 }
 
 contract Escrow is Initializable, AccessControlEnumerableUpgradeable {
-    address public portalAddress;
-    address public deusAddress;
-    uint256 public thresholdAmount;
+	address public portalAddress;
+	address public deusAddress;
+	address public msigAddress;
+	uint256 public thresholdAmount;
 
-    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
-    bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
+	bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
+	bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
+	bytes32 public constant ASSET_MANAGER_ROLE = keccak256("ASSET_MANAGER_ROLE");
 
-    event DepositToPortal(uint256 amount, uint256 thresholdAmount);
-    event WithdrawFromPortal(uint256 amount, uint256 thresholdAmount);
-    event SetThresholdAmount(uint256 thresholdAmount);
-    event WithdrawERC20(address token, address to, uint256 amount);
+	event DepositToPortal(uint256 amount, uint256 thresholdAmount);
+	event WithdrawFromPortal(uint256 amount, uint256 thresholdAmount);
+	event SetThresholdAmount(uint256 thresholdAmount);
+	event WithdrawERC20(address token, address to, uint256 amount);
 
-    function initialize(address _portalAddress, address _deusAddress, uint256 _thresholdAmount) public initializer {
-        __AccessControl_init();
-        __Escrow_init_unchained(_portalAddress, _deusAddress, _thresholdAmount);
-    }
+	function initialize(
+		address _portalAddress,
+		address _deusAddress,
+		address _msigAddress,
+		uint256 _thresholdAmount
+	) public initializer {
+		__AccessControl_init();
 
-    function __Escrow_init_unchained(
-        address _portalAddress,
-        address _deusAddress,
-        uint256 _thresholdAmount
-    ) internal onlyInitializing {
-        portalAddress = _portalAddress;
-        deusAddress = _deusAddress;
-        thresholdAmount = _thresholdAmount;
+		portalAddress = _portalAddress;
+		deusAddress = _deusAddress;
+		msigAddress = _msigAddress;
+		thresholdAmount = _thresholdAmount;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
-    }
+		_grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+	}
 
-    function depositToPortal() external onlyRole(DEPOSITOR_ROLE) {
-        IERC20 deus = IERC20(deusAddress);
-        uint256 portalBalance = deus.balanceOf(portalAddress);
-        require(portalBalance < thresholdAmount, "Escrow: Portal balance exceeds the threshold");
+	function depositToPortal() external onlyRole(DEPOSITOR_ROLE) {
+		uint256 portalBalance = IERC20(deusAddress).balanceOf(portalAddress);
+		require(portalBalance < thresholdAmount, "Escrow: Portal balance exceeds the threshold");
 
-        uint256 requiredAmount = thresholdAmount - portalBalance;
-        uint256 escrowBalance = deus.balanceOf(address(this));
-        uint256 amount = requiredAmount < escrowBalance ? requiredAmount : escrowBalance;
+		uint256 requiredAmount = thresholdAmount - portalBalance;
+		uint256 escrowBalance = IERC20(deusAddress).balanceOf(address(this));
+		uint256 amount = requiredAmount < escrowBalance ? requiredAmount : escrowBalance;
 
-        deus.approve(portalAddress, amount);
-        IPortal(portalAddress).deposit(amount, 0);
+		IERC20(deusAddress).approve(portalAddress, amount);
+		IPortal(portalAddress).deposit(amount, 0);
 
-        emit DepositToPortal(amount, thresholdAmount);
-    }
+		emit DepositToPortal(amount, thresholdAmount);
+	}
 
-    function withdrawFromPortal() external onlyRole(WITHDRAWER_ROLE) {
-        uint256 portalBalance = IERC20(deusAddress).balanceOf(portalAddress);
-        require(portalBalance > thresholdAmount, "Escrow: Portal balance is below the threshold");
+	function withdrawFromPortal() external onlyRole(WITHDRAWER_ROLE) {
+		uint256 portalBalance = IERC20(deusAddress).balanceOf(portalAddress);
+		require(portalBalance > thresholdAmount, "Escrow: Portal balance is below the threshold");
 
-        uint256 requiredAmount = portalBalance - thresholdAmount;
-        IPortal(portalAddress).withdraw(requiredAmount, 0);
+		uint256 requiredAmount = portalBalance - thresholdAmount;
+		IPortal(portalAddress).withdraw(requiredAmount, 0);
 
-        emit WithdrawFromPortal(requiredAmount, thresholdAmount);
-    }
+		emit WithdrawFromPortal(requiredAmount, thresholdAmount);
+	}
 
-    function setThresholdAmount(uint256 _thresholdAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        thresholdAmount = _thresholdAmount;
+	function setThresholdAmount(uint256 _thresholdAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		thresholdAmount = _thresholdAmount;
 
-        emit SetThresholdAmount(_thresholdAmount);
-    }
+		emit SetThresholdAmount(_thresholdAmount);
+	}
 
-    function withdrawERC20(address token, address to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        IERC20(token).transfer(to, amount);
+	function withdrawERC20(address token, uint256 amount) external onlyRole(ASSET_MANAGER_ROLE) {
+		IERC20(token).transfer(msigAddress, amount);
 
-        emit WithdrawERC20(token, to, amount);
-    }
+		emit WithdrawERC20(token, msigAddress, amount);
+	}
 }

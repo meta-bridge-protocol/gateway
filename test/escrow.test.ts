@@ -38,6 +38,7 @@ describe("Escrow", () => {
 		escrow = await upgrades.deployProxy(Escrow, [
 			await gateway.getAddress(),
 			await realToken.getAddress(),
+			await owner.getAddress(),
 			thresholdAmount
 		])
 		await escrow.waitForDeployment()
@@ -47,6 +48,7 @@ describe("Escrow", () => {
 
 		await escrow.grantRole(await escrow.DEPOSITOR_ROLE(), await user1.getAddress())
 		await escrow.grantRole(await escrow.WITHDRAWER_ROLE(), await user1.getAddress())
+		await escrow.grantRole(await escrow.ASSET_MANAGER_ROLE(), await user2.getAddress())
 	})
 
 	describe("depositToPortal function", () => {
@@ -63,7 +65,8 @@ describe("Escrow", () => {
 
 		it("should deposit as much as possible if the escrow balance is under the required amount", async () => {
 			await escrow.setThresholdAmount(3000)
-			await expect(escrow.connect(user1).depositToPortal()).to.emit(escrow, "DepositToPortal")
+			await expect(escrow.connect(user1).depositToPortal())
+				.to.emit(escrow, "DepositToPortal")
 				.withArgs(1000, 3000)
 		})
 
@@ -106,13 +109,16 @@ describe("Escrow", () => {
 	describe("withdraw function", () => {
 		it("should allow DEFAULT_ADMIN_ROLE to withdraw tokens", async () => {
 			const amount = 1000
-			await escrow.connect(owner).withdrawERC20(await realToken.getAddress(), await owner.getAddress(), amount)
+			const beforeBalance = await realToken.balanceOf(await owner.getAddress())
+			await escrow.connect(user2).withdrawERC20(await realToken.getAddress(), amount)
+			const afterBalance = await realToken.balanceOf(await owner.getAddress())
+			expect(afterBalance - beforeBalance).equal(amount)
 		})
 
-		it("should fail if the caller is not DEFAULT_ADMIN_ROLE", async () => {
+		it("should fail if the caller is not ASSET_MANAGER_ROLE", async () => {
 			const amount = 1000
 			await expect(
-				escrow.connect(user1).withdrawERC20(await realToken.getAddress(), await user1.getAddress(), amount)
+				escrow.connect(user1).withdrawERC20(await realToken.getAddress(), amount)
 			).to.be.reverted
 		})
 	})
