@@ -1,4 +1,4 @@
-import hre, { ethers } from "hardhat"
+import hre, { ethers, upgrades } from "hardhat"
 
 async function deployAxelarGateway(admin: string, axlToken: string, realToken: string, deployer: string) {
 	let factory = await ethers.getContractFactory("AxelarGateway", {
@@ -17,4 +17,21 @@ async function deployAxelarGateway(admin: string, axlToken: string, realToken: s
 	return axelarGateway
 }
 
-export { deployAxelarGateway }
+async function deployEscrow(gateway: string, deus: string, msig: string, thresholdAmount: string, deployer: string) {
+	const factory = await ethers.getContractFactory("Escrow", {
+		signer: await ethers.getSigner(deployer)
+	})
+	const escrow = await upgrades.deployProxy(factory, [gateway, deus, msig, thresholdAmount])
+	await escrow.waitForDeployment()
+	try {
+		await hre.run("verify:verify", {
+			address: await escrow.getAddress(),
+			constructorArguments: [gateway, deus, msig, thresholdAmount]
+		})
+	} catch {
+		console.log("Failed to verify")
+	}
+	return escrow
+}
+
+export { deployAxelarGateway, deployEscrow }
