@@ -92,12 +92,25 @@ const config: HardhatUserConfig = {
 			accounts: [process.env.NEW_MAIN_DEPLOYER!]
 		}
 	},
+	sourcify: {
+		enabled: false
+	},
 	gasReporter: {
 		enabled: process.env.REPORT_GAS !== undefined,
 		currency: "USD"
 	},
 	etherscan: {
-		apiKey: process.env.ETHERSCAN_API_KEY
+		apiKey: process.env.ETHERSCAN_API_KEY,
+		customChains: [
+			{
+				network: "blast",
+				chainId: 81457,
+				urls: {
+					apiURL: `https://api.blastscan.io/api?module=contract&action=verifysourcecode&apikey=${process.env.ETHERSCAN_API_KEY}`,
+					browserURL: "https://blastscan.io"
+				}
+			}
+		]
 	}
 }
 

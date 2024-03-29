@@ -9,6 +9,7 @@ async function deployAxelarGatewayContract() {
 	 * Kava:      0xebD4A18034C78A415088DF8508f102421eD693b1
 	 * Polygon:   0x12A80A285DfaBd23FC1DFe6c515F034A22d9cdCE
 	 * Base:      0xebD4A18034C78A415088DF8508f102421eD693b1
+	 * Blast:     0xebD4A18034C78A415088DF8508f102421eD693b1
 	 */
 	/**
 	 * gnosis safe (admin):
@@ -18,13 +19,14 @@ async function deployAxelarGatewayContract() {
 	 * Kava:      0xE5227F141575DcE74721f4A9bE2D7D636F923044
 	 * Polygon:   0x7F5Ae1dC8D2B5d599409C57978D21Cf596D37996
 	 * Base:      0x3FAa9dD2781080a39B1955b16Fd24367A57F6531
+	 * Blast:     0x9f665cf27dEf8CcEb051cd7ac778632200885Ca7
 	 */
-	let admin = "0x3FAa9dD2781080a39B1955b16Fd24367A57F6531"
+	let admin = "0x9f665cf27dEf8CcEb051cd7ac778632200885Ca7"
 	let axlToken = "0xebD4A18034C78A415088DF8508f102421eD693b1"
-	let realToken = "0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44"
+	let realToken = "0xDE55B113A27Cc0c5893CAa6Ee1C020b6B46650C0"
 	let deployer = "0x1779cE3216D30642b677C419025f5cFb8521d340"
 	let axelarGateway = await deployAxelarGateway(admin, axlToken, realToken, deployer)
-	console.log("AxelarGateway deployed at:", axelarGateway.address)
+	console.log("AxelarGateway deployed at:", await axelarGateway.getAddress())
 }
 
 deployAxelarGatewayContract()
