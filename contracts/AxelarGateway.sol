@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -10,6 +11,8 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 /// @author DEUS Finance
 /// @notice This contract allows users to swap "axl" prefixed tokens to real tokens and vice versa.
 contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
+	using SafeERC20 for IERC20;
+
 	enum SwapType {
 		TO_REAL,
 		TO_AXL
@@ -162,8 +165,8 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 			toToken = token.realToken;
 		}
 
-		IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
-		IERC20(toToken).transfer(to, amount);
+		IERC20(fromToken).safeTransferFrom(msg.sender, address(this), amount);
+		IERC20(toToken).safeTransfer(to, amount);
 
 		emit TokenSwapped(msg.sender, to, fromToken, toToken, amount);
 	}
@@ -177,10 +180,10 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 		Token memory token = tokens[tokenId];
 		require(token.active, "AxelarGateway: INACTIVE_TOKEN");
 		if (realTokenAmount > 0) {
-			IERC20(token.realToken).transferFrom(msg.sender, address(this), realTokenAmount);
+			IERC20(token.realToken).safeTransferFrom(msg.sender, address(this), realTokenAmount);
 		}
 		if (axlTokenAmount > 0) {
-			IERC20(token.axlToken).transferFrom(msg.sender, address(this), axlTokenAmount);
+			IERC20(token.axlToken).safeTransferFrom(msg.sender, address(this), axlTokenAmount);
 		}
 
 		deposits[tokenId][msg.sender] += realTokenAmount + axlTokenAmount;
@@ -199,10 +202,10 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 		require(token.active, "AxelarGateway: INACTIVE_TOKEN");
 		deposits[tokenId][msg.sender] -= totalWithdrawal;
 		if (realTokenAmount > 0) {
-			IERC20(token.realToken).transfer(msg.sender, realTokenAmount);
+			IERC20(token.realToken).safeTransfer(msg.sender, realTokenAmount);
 		}
 		if (axlTokenAmount > 0) {
-			IERC20(token.axlToken).transfer(msg.sender, axlTokenAmount);
+			IERC20(token.axlToken).safeTransfer(msg.sender, axlTokenAmount);
 		}
 
 		emit Withdrawn(msg.sender, tokenId, realTokenAmount, axlTokenAmount);
