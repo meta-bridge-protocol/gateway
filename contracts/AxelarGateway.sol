@@ -31,6 +31,9 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 	mapping(uint16 => Token) public tokens;
 	mapping(uint16 => mapping(address => uint256)) public deposits;
 
+	mapping(address => uint16) public tokensFromReal;
+	mapping(address => uint16) public tokensFromAxl;
+
 	/// @notice Event to log the successful token swap.
 	/// @param from The address that initiated the swap.
 	/// @param to The address that received the swapped tokens.
@@ -61,6 +64,22 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 		_grantRole(OPERATOR_ROLE, operator);
 	}
 
+	/// @notice Get a Token info via its real token address.
+	/// @param realToken The address of the corresponding real token.
+	/// @return Token info
+	function getTokenViaReal(address realToken) external view returns (Token memory) {
+		uint16 tokenId = tokensFromReal[realToken];
+		return tokens[tokenId];
+	}
+
+	/// @notice Get a Token info via its axl token address.
+	/// @param axlToken The address of the axl prefixed token.
+	/// @return Token info
+	function getTokenViaAxl(address axlToken) external view returns (Token memory) {
+		uint16 tokenId = tokensFromAxl[axlToken];
+		return tokens[tokenId];
+	}
+
 	/// @notice Add a new Token. Can only calls by an address with OPERATOR_ROLE.
 	/// @param realToken The address of the corresponding real token.
 	/// @param axlToken The address of the axl prefixed token.
@@ -68,14 +87,20 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 	function addToken(address realToken, address axlToken) external onlyRole(OPERATOR_ROLE) returns (uint16 tokenId) {
 		require(axlToken != address(0), "AxelarGateway: AXL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
 		require(realToken != address(0), "AxelarGateway: REAL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
+		require(tokensFromReal[realToken] == 0, "AxelarGateway: DUPLICATE_REAL_TOKEN");
+		require(tokensFromAxl[axlToken] == 0, "AxelarGateway: DUPLICATE_AXL_TOKEN");
 		tokenId = ++lastTokenId;
 		tokens[tokenId] = Token(tokenId, realToken, axlToken, true);
+		tokensFromReal[realToken] = tokenId;
+		tokensFromAxl[axlToken] = tokenId;
 	}
 
 	/// @notice Remove an existing Token. Can only calls by an address with OPERATOR_ROLE.
 	/// @param tokenId The ID of the token to remove.
 	function removeToken(uint16 tokenId) external onlyRole(OPERATOR_ROLE) {
 		require(tokenId != 0 && tokens[tokenId].id == tokenId, "AxelarGateway: INVALID_TOKEN");
+		delete tokensFromReal[tokens[tokenId].realToken];
+		delete tokensFromAxl[tokens[tokenId].axlToken];
 		delete tokens[tokenId];
 	}
 
