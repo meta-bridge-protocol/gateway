@@ -17,7 +17,8 @@ async function init() {
     await realToken.waitForDeployment()
     let axlAddress = await axlToken.getAddress()
     let realAddress = await realToken.getAddress()
-    let axelarGateway = await deployAxelarGateway(admin, axlAddress, realAddress, admin, false)
+    let axelarGateway = await deployAxelarGateway(admin , admin, admin, false)
+    console.log('Token ID:', await axelarGateway.addToken(realAddress, axlAddress))
     let gatewayAddress = await axelarGateway.getAddress()
     let escrow = await deployEscrow(
         gatewayAddress, realAddress, admin, "1000000000000000000000", admin, false)

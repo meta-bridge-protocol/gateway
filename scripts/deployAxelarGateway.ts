@@ -22,10 +22,8 @@ async function deployAxelarGatewayContract() {
 	 * Blast:     0x9f665cf27dEf8CcEb051cd7ac778632200885Ca7
 	 */
 	let admin = "0x9f665cf27dEf8CcEb051cd7ac778632200885Ca7"
-	let axlToken = "0xebD4A18034C78A415088DF8508f102421eD693b1"
-	let realToken = "0xDE55B113A27Cc0c5893CAa6Ee1C020b6B46650C0"
 	let deployer = "0x1779cE3216D30642b677C419025f5cFb8521d340"
-	let axelarGateway = await deployAxelarGateway(admin, axlToken, realToken, deployer)
+	let axelarGateway = await deployAxelarGateway(admin, admin, deployer)
 	console.log("AxelarGateway deployed at:", await axelarGateway.getAddress())
 }
 

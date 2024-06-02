@@ -2,21 +2,20 @@ import hre, {ethers, upgrades} from "hardhat"
 
 async function deployAxelarGateway(
     admin: string,
-    axlToken: string,
-    realToken: string,
+    operator: string,
     deployer: string,
     verify: boolean = true
 ) {
     let factory = await ethers.getContractFactory("AxelarGateway", {
         signer: await ethers.getSigner(deployer)
     })
-    let axelarGateway = await factory.deploy(admin, axlToken, realToken)
+    let axelarGateway = await factory.deploy(admin, operator)
     await axelarGateway.waitForDeployment()
     if (verify)
         try {
             await hre.run("verify:verify", {
                 address: await axelarGateway.getAddress(),
-                constructorArguments: [admin, axlToken, realToken]
+                constructorArguments: [admin, operator]
             })
         } catch {
             console.log("Failed to verify")
