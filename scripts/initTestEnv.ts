@@ -6,7 +6,7 @@ import {Signer} from "ethers"
 async function init() {
     let botAddress = process.env.ESCROW_BOT_WALLET!
     let deployer: Signer
-    [deployer] = await ethers.getSigners()
+    [deployer, ,] = await ethers.getSigners()
     let admin = await deployer.getAddress()
     console.log(`deployer:      ${admin}`)
     console.log(`bot wallet:    ${botAddress}`)
@@ -17,7 +17,7 @@ async function init() {
     await realToken.waitForDeployment()
     let axlAddress = await axlToken.getAddress()
     let realAddress = await realToken.getAddress()
-    let axelarGateway = await deployAxelarGateway(admin , admin, admin, false)
+    let axelarGateway = await deployAxelarGateway(admin, admin, admin, false)
     console.log('Token ID:', await axelarGateway.addToken(realAddress, axlAddress))
     let gatewayAddress = await axelarGateway.getAddress()
     let escrow = await deployEscrow(

@@ -9,6 +9,7 @@ import "hardhat-gas-reporter"
 import "solidity-coverage"
 
 dotenv.config()
+const accounts = [process.env.NEW_MAIN_DEPLOYER!, process.env.USER_PRIVATE!, process.env.RECIPIENT_PRIVATE!]
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 	const accounts = await hre.ethers.getSigners()
@@ -33,63 +34,59 @@ const config: HardhatUserConfig = {
 	},
 	networks: {
 		localhost: {
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
-		},
-		forking: {
-			url: "http://127.0.0.1:8545",
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		blast: {
 			url: "https://rpc.blast.io",
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		fantom: {
 			url: "https://rpc.ftm.tools",
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		fantom_test: {
 			url: "https://rpc.testnet.fantom.network/",
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		goerli: {
 			url: `https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		mainnet: {
 			url: `https://ethereum.publicnode.com`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		bsc: {
 			url: `https://bsc.rpc.blxrbdn.com`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		polygon: {
 			url: `https://polygon-rpc.com/`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		arbitrum: {
 			url: `https://arb1.arbitrum.io/rpc`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		avax: {
 			url: `https://ava-mainnet.public.blastapi.io/ext/bc/C/rpc`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		kava: {
 			url: `https://evm.kava.io`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		zkevm: {
 			url: `https://zkevm-rpc.com`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		op: {
 			url: `https://optimism.llamarpc.com	`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		},
 		base: {
 			url: `https://base.llamarpc.com`,
-			accounts: [process.env.NEW_MAIN_DEPLOYER!]
+			accounts: accounts
 		}
 	},
 	sourcify: {

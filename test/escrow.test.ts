@@ -23,10 +23,13 @@ describe("Escrow", () => {
 		const AxelarGateway = await ethers.getContractFactory("AxelarGateway")
 		gateway = await AxelarGateway.deploy(
 			await owner.getAddress(),
-			await axlToken.getAddress(),
-			await realToken.getAddress()
+			await owner.getAddress()
 		)
 		await gateway.waitForDeployment()
+		await gateway.addToken(
+            await realToken.getAddress(),
+			await axlToken.getAddress()
+        )
 
 		await axlToken.mint(await user1.getAddress(), 1000)
 		await realToken.mint(await user1.getAddress(), 1000)
