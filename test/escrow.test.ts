@@ -20,8 +20,8 @@ describe("Escrow", () => {
         realToken = await TestToken.deploy("Real Token", "REAL")
         await realToken.waitForDeployment()
 
-        const AxelarGateway = await ethers.getContractFactory("AxelarGateway")
-        gateway = await AxelarGateway.deploy(
+        const Gateway = await ethers.getContractFactory("Gateway")
+        gateway = await Gateway.deploy(
             await owner.getAddress(),
             await owner.getAddress()
         )

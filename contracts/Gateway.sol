@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-/// @title AxelarGateway
+/// @title Gateway
 /// @author DEUS Finance
 /// @notice This contract allows users to swap "axl" prefixed tokens to real tokens and vice versa.
-contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
+contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
     using SafeERC20 for IERC20;
 
     enum SwapType {
@@ -75,12 +75,12 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         uint256 axlTokenAmount
     );
 
-    /// @notice Constructs a new AxelarGateway contract.
+    /// @notice Constructs a new Gateway contract.
     constructor(
         address admin,
         address operator
     ) {
-        require(admin != address(0), "AxelarGateway: ADMIN_ADDRESS_MUST_BE_NON-ZERO");
+        require(admin != address(0), "Gateway: ADMIN_ADDRESS_MUST_BE_NON-ZERO");
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(OPERATOR_ROLE, operator);
@@ -110,10 +110,10 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         address realToken,
         address axlToken
     ) external onlyRole(OPERATOR_ROLE) returns (uint16 tokenId) {
-        require(axlToken != address(0), "AxelarGateway: AXL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
-        require(realToken != address(0), "AxelarGateway: REAL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
-        require(tokensFromReal[realToken] == 0, "AxelarGateway: DUPLICATE_REAL_TOKEN");
-        require(tokensFromAxl[axlToken] == 0, "AxelarGateway: DUPLICATE_AXL_TOKEN");
+        require(axlToken != address(0), "Gateway: AXL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
+        require(realToken != address(0), "Gateway: REAL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
+        require(tokensFromReal[realToken] == 0, "Gateway: DUPLICATE_REAL_TOKEN");
+        require(tokensFromAxl[axlToken] == 0, "Gateway: DUPLICATE_AXL_TOKEN");
 
         tokenId = ++lastTokenId;
         tokens[tokenId] = Token(tokenId, realToken, axlToken, true);
@@ -126,7 +126,7 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
     function removeToken(
         uint16 tokenId
     ) external onlyRole(OPERATOR_ROLE) {
-        require(tokenId != 0 && tokens[tokenId].id == tokenId, "AxelarGateway: INVALID_TOKEN");
+        require(tokenId != 0 && tokens[tokenId].id == tokenId, "Gateway: INVALID_TOKEN");
 
         delete tokensFromReal[tokens[tokenId].realToken];
         delete tokensFromAxl[tokens[tokenId].axlToken];
@@ -140,7 +140,7 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         uint16 tokenId,
         bool active
     ) external onlyRole(OPERATOR_ROLE) {
-        require(tokenId != 0 && tokens[tokenId].id == tokenId, "AxelarGateway: INVALID_TOKEN");
+        require(tokenId != 0 && tokens[tokenId].id == tokenId, "Gateway: INVALID_TOKEN");
 
         tokens[tokenId].active = active;
     }
@@ -200,11 +200,11 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         address to,
         SwapType type_
     ) internal {
-        require(amount > 0, "AxelarGateway: AMOUNT_MUST_BE_GREATER_THAN_0");
-        require(to != address(0), "AxelarGateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO");
+        require(amount > 0, "Gateway: AMOUNT_MUST_BE_GREATER_THAN_0");
+        require(to != address(0), "Gateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO");
 
         Token memory token = tokens[tokenId];
-        require(token.active, "AxelarGateway: INACTIVE_TOKEN");
+        require(token.active, "Gateway: INACTIVE_TOKEN");
 
         address fromToken;
         address toToken;
@@ -231,10 +231,10 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         uint256 realTokenAmount,
         uint256 axlTokenAmount
     ) external nonReentrant whenNotPaused {
-        require(realTokenAmount + axlTokenAmount > 0, "AxelarGateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0");
+        require(realTokenAmount + axlTokenAmount > 0, "Gateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0");
 
         Token memory token = tokens[tokenId];
-        require(token.active, "AxelarGateway: INACTIVE_TOKEN");
+        require(token.active, "Gateway: INACTIVE_TOKEN");
 
         if (realTokenAmount > 0) {
             IERC20(token.realToken).safeTransferFrom(msg.sender, address(this), realTokenAmount);
@@ -258,11 +258,11 @@ contract AxelarGateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         uint256 axlTokenAmount
     ) external nonReentrant whenNotPaused {
         uint256 totalWithdrawal = realTokenAmount + axlTokenAmount;
-        require(totalWithdrawal > 0, "AxelarGateway: TOTAL_WITHDRAWAL_MUST_BE_GREATER_THAN_0");
-        require(deposits[tokenId][msg.sender] >= totalWithdrawal, "AxelarGateway: INSUFFICIENT_USER_BALANCE");
+        require(totalWithdrawal > 0, "Gateway: TOTAL_WITHDRAWAL_MUST_BE_GREATER_THAN_0");
+        require(deposits[tokenId][msg.sender] >= totalWithdrawal, "Gateway: INSUFFICIENT_USER_BALANCE");
 
         Token memory token = tokens[tokenId];
-        require(token.active, "AxelarGateway: INACTIVE_TOKEN");
+        require(token.active, "Gateway: INACTIVE_TOKEN");
 
         deposits[tokenId][msg.sender] -= totalWithdrawal;
         if (realTokenAmount > 0) {

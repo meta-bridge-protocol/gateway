@@ -1,6 +1,6 @@
-import {deployAxelarGateway} from "./deploy"
+import {deployGateway} from "./deploy"
 
-async function deployAxelarGatewayContract() {
+async function deployGatewayContract() {
     /**
      * axlDEUS addresses on chains:
      * Avalanche: 0xf9617c66cD8a4193A4DE0a101e16D73B71828810
@@ -23,11 +23,11 @@ async function deployAxelarGatewayContract() {
      */
     let admin = "0x9f665cf27dEf8CcEb051cd7ac778632200885Ca7"
     let deployer = "0x1779cE3216D30642b677C419025f5cFb8521d340"
-    let axelarGateway = await deployAxelarGateway(admin, admin, deployer)
-    console.log("AxelarGateway deployed at:", await axelarGateway.getAddress())
+    let gateway = await deployGateway(admin, admin, deployer)
+    console.log("Gateway deployed at:", await gateway.getAddress())
 }
 
-deployAxelarGatewayContract()
+deployGatewayContract()
     .then(() => {
         console.log("done")
     })

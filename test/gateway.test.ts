@@ -2,7 +2,7 @@ import {expect} from "chai"
 import {ethers} from "hardhat"
 import {Signer} from "ethers"
 
-describe("AxelarGateway", () => {
+describe("Gateway", () => {
     let axlToken: any
     let realToken: any
     let gateway: any
@@ -19,8 +19,8 @@ describe("AxelarGateway", () => {
         realToken = await TestToken.deploy("Real Token", "REAL")
         await realToken.waitForDeployment()
 
-        const AxelarGateway = await ethers.getContractFactory("AxelarGateway")
-        gateway = await AxelarGateway.deploy(
+        const Gateway = await ethers.getContractFactory("Gateway")
+        gateway = await Gateway.deploy(
             await owner.getAddress(),
             await owner.getAddress()
         )
@@ -80,10 +80,10 @@ describe("AxelarGateway", () => {
 
         it("should not allow swapping with zero amount", async () => {
             await expect(gateway.connect(user).swapToReal(tokenId, 0)).to.be.revertedWith(
-                "AxelarGateway: AMOUNT_MUST_BE_GREATER_THAN_0"
+                "Gateway: AMOUNT_MUST_BE_GREATER_THAN_0"
             )
             await expect(gateway.connect(user).swapToAxl(tokenId, 0)).to.be.revertedWith(
-                "AxelarGateway: AMOUNT_MUST_BE_GREATER_THAN_0"
+                "Gateway: AMOUNT_MUST_BE_GREATER_THAN_0"
             )
         })
 
@@ -91,7 +91,7 @@ describe("AxelarGateway", () => {
             const amount = 100
             await axlToken.connect(user).approve(await gateway.getAddress(), amount)
             await expect(gateway.connect(user).swapToRealTo(tokenId, amount, ethers.ZeroAddress)).to.be.revertedWith(
-                "AxelarGateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO"
+                "Gateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO"
             )
         })
 
@@ -99,7 +99,7 @@ describe("AxelarGateway", () => {
             const amount = 100
             await realToken.connect(user).approve(await gateway.getAddress(), amount)
             await expect(gateway.connect(user).swapToAxlTo(tokenId, amount, ethers.ZeroAddress)).to.be.revertedWith(
-                "AxelarGateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO"
+                "Gateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO"
             )
         })
 
@@ -120,7 +120,7 @@ describe("AxelarGateway", () => {
 
         it("should not allow depsiting with zero amount", async () => {
             await expect(gateway.connect(user).deposit(tokenId, 0, 0)).to.be.revertedWith(
-                "AxelarGateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0"
+                "Gateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0"
             )
         })
 
@@ -151,12 +151,12 @@ describe("AxelarGateway", () => {
         })
         it("should not allow withdrawing with zero amount", async () => {
             await expect(gateway.connect(user).withdraw(tokenId, 0, 0)).to.be.revertedWith(
-                "AxelarGateway: TOTAL_WITHDRAWAL_MUST_BE_GREATER_THAN_0"
+                "Gateway: TOTAL_WITHDRAWAL_MUST_BE_GREATER_THAN_0"
             )
         })
         it("should not allow withdrawing with greater amount than user deposited amount", async () => {
             await expect(gateway.connect(user).withdraw(tokenId, 1500, 1500)).to.be.revertedWith(
-                "AxelarGateway: INSUFFICIENT_USER_BALANCE"
+                "Gateway: INSUFFICIENT_USER_BALANCE"
             )
         })
     })

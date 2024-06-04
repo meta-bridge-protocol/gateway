@@ -1,4 +1,4 @@
-import {deployAxelarGateway} from "./deploy"
+import {deployGateway} from "./deploy"
 import {deployEscrow} from "./deploy"
 import {ethers} from "hardhat";
 import {Signer} from "ethers"
@@ -17,9 +17,9 @@ async function init() {
     await realToken.waitForDeployment()
     let axlAddress = await axlToken.getAddress()
     let realAddress = await realToken.getAddress()
-    let axelarGateway = await deployAxelarGateway(admin, admin, admin, false)
-    console.log('Token ID:', await axelarGateway.addToken(realAddress, axlAddress))
-    let gatewayAddress = await axelarGateway.getAddress()
+    let gateway = await deployGateway(admin, admin, admin, false)
+    console.log('Token ID:', await gateway.addToken(realAddress, axlAddress))
+    let gatewayAddress = await gateway.getAddress()
     let escrow = await deployEscrow(
         gatewayAddress, realAddress, admin, "1000000000000000000000", admin, false)
     let escrowAddress = await escrow.getAddress()
@@ -30,7 +30,7 @@ async function init() {
     await escrow.grantRole(await escrow.WITHDRAWER_ROLE(), botAddress)
     await axlToken.mint(botAddress, "1000000000000000000000")
     await realToken.mint(botAddress, "1000000000000000000000")
-    console.log(`AxelarGateway: ${gatewayAddress}`)
+    console.log(`Gateway: ${gatewayAddress}`)
     console.log(`Escrow:        ${escrowAddress}`)
     console.log(`\nBalances:`)
     console.log(`\tAG:  ${await realToken.balanceOf(gatewayAddress)} REAL`)
