@@ -1,5 +1,5 @@
 {
-  "name": "axelar-port",
+  "name": "gateway",
   "license": "MIT",
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.5",

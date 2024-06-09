@@ -5,16 +5,16 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IPortal {
-    function withdraw(uint16 tokenId, uint256 realTokenAmount, uint256 axlTokenAmount) external;
+interface IGateway {
+    function withdraw(uint16 tokenId, uint256 realTokenAmount, uint256 bridgedTokenAmount) external;
 
-    function deposit(uint16 tokenId, uint256 realTokenAmount, uint256 axlTokenAmount) external;
+    function deposit(uint16 tokenId, uint256 realTokenAmount, uint256 bridgedTokenAmount) external;
 
     function tokensFromReal(address) external view returns (uint16);
 }
 
 contract Escrow is Initializable, AccessControlEnumerableUpgradeable {
-    address public portalAddress;
+    address public gatewayAddress;
     address public deusAddress;
     uint16 public tokenId;
     address public msigAddress;
@@ -24,51 +24,51 @@ contract Escrow is Initializable, AccessControlEnumerableUpgradeable {
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
     bytes32 public constant ASSET_MANAGER_ROLE = keccak256("ASSET_MANAGER_ROLE");
 
-    event DepositToPortal(uint256 amount, uint256 thresholdAmount);
-    event WithdrawFromPortal(uint256 amount, uint256 thresholdAmount);
+    event DepositToGateway(uint256 amount, uint256 thresholdAmount);
+    event WithdrawFromGateway(uint256 amount, uint256 thresholdAmount);
     event SetThresholdAmount(uint256 thresholdAmount);
     event WithdrawERC20(address token, address to, uint256 amount);
 
     function initialize(
-        address _portalAddress,
+        address _gatewayAddress,
         address _deusAddress,
         address _msigAddress,
         uint256 _thresholdAmount
     ) public initializer {
         __AccessControl_init();
 
-        portalAddress = _portalAddress;
+        gatewayAddress = _gatewayAddress;
         deusAddress = _deusAddress;
         msigAddress = _msigAddress;
         thresholdAmount = _thresholdAmount;
 
-        tokenId = IPortal(portalAddress).tokensFromReal(deusAddress);
+        tokenId = IGateway(gatewayAddress).tokensFromReal(deusAddress);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _msigAddress);
     }
 
-    function depositToPortal() external onlyRole(DEPOSITOR_ROLE) {
-        uint256 portalBalance = IERC20(deusAddress).balanceOf(portalAddress);
-        require(portalBalance < thresholdAmount, "Escrow: Portal balance exceeds the threshold");
+    function depositToGateway() external onlyRole(DEPOSITOR_ROLE) {
+        uint256 gatewayBalance = IERC20(deusAddress).balanceOf(gatewayAddress);
+        require(gatewayBalance < thresholdAmount, "Escrow: Gateway balance exceeds the threshold");
 
-        uint256 requiredAmount = thresholdAmount - portalBalance;
+        uint256 requiredAmount = thresholdAmount - gatewayBalance;
         uint256 escrowBalance = IERC20(deusAddress).balanceOf(address(this));
         uint256 amount = requiredAmount < escrowBalance ? requiredAmount : escrowBalance;
 
-        IERC20(deusAddress).approve(portalAddress, amount);
-        IPortal(portalAddress).deposit(tokenId, amount, 0);
+        IERC20(deusAddress).approve(gatewayAddress, amount);
+        IGateway(gatewayAddress).deposit(tokenId, amount, 0);
 
-        emit DepositToPortal(amount, thresholdAmount);
+        emit DepositToGateway(amount, thresholdAmount);
     }
 
-    function withdrawFromPortal() external onlyRole(WITHDRAWER_ROLE) {
-        uint256 portalBalance = IERC20(deusAddress).balanceOf(portalAddress);
-        require(portalBalance > thresholdAmount, "Escrow: Portal balance is below the threshold");
+    function withdrawFromGateway() external onlyRole(WITHDRAWER_ROLE) {
+        uint256 gatewayBalance = IERC20(deusAddress).balanceOf(gatewayAddress);
+        require(gatewayBalance > thresholdAmount, "Escrow: Gateway balance is below the threshold");
 
-        uint256 requiredAmount = portalBalance - thresholdAmount;
-        IPortal(portalAddress).withdraw(tokenId, requiredAmount, 0);
+        uint256 requiredAmount = gatewayBalance - thresholdAmount;
+        IGateway(gatewayAddress).withdraw(tokenId, requiredAmount, 0);
 
-        emit WithdrawFromPortal(requiredAmount, thresholdAmount);
+        emit WithdrawFromGateway(requiredAmount, thresholdAmount);
     }
 
     function setThresholdAmount(uint256 _thresholdAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {

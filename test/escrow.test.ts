@@ -4,7 +4,7 @@ import {Signer} from "ethers"
 
 describe("Escrow", () => {
     let escrow: any
-    let axlToken: any
+    let bridgedToken: any
     let realToken: any
     let gateway: any
     let user1: Signer, user2: Signer, owner: Signer
@@ -14,8 +14,8 @@ describe("Escrow", () => {
         ;[owner, user1, user2] = await ethers.getSigners()
 
         const TestToken = await ethers.getContractFactory("TestToken")
-        axlToken = await TestToken.deploy("AXL Token", "AXL")
-        await axlToken.waitForDeployment()
+        bridgedToken = await TestToken.deploy("Bridged Token", "BRG")
+        await bridgedToken.waitForDeployment()
 
         realToken = await TestToken.deploy("Real Token", "REAL")
         await realToken.waitForDeployment()
@@ -28,13 +28,13 @@ describe("Escrow", () => {
         await gateway.waitForDeployment()
         await gateway.addToken(
             await realToken.getAddress(),
-            await axlToken.getAddress()
+            await bridgedToken.getAddress()
         )
 
-        await axlToken.mint(await user1.getAddress(), 1000)
+        await bridgedToken.mint(await user1.getAddress(), 1000)
         await realToken.mint(await user1.getAddress(), 1000)
 
-        await axlToken.mint(await gateway.getAddress(), 1000)
+        await bridgedToken.mint(await gateway.getAddress(), 1000)
         await realToken.mint(await gateway.getAddress(), 1000)
 
         const Escrow = await ethers.getContractFactory("Escrow")
@@ -46,7 +46,7 @@ describe("Escrow", () => {
         ])
         await escrow.waitForDeployment()
 
-        await axlToken.mint(await escrow.getAddress(), 1000)
+        await bridgedToken.mint(await escrow.getAddress(), 1000)
         await realToken.mint(await escrow.getAddress(), 1000)
 
         await escrow.grantRole(await escrow.DEPOSITOR_ROLE(), await user1.getAddress())
@@ -54,45 +54,45 @@ describe("Escrow", () => {
         await escrow.grantRole(await escrow.ASSET_MANAGER_ROLE(), await user2.getAddress())
     })
 
-    describe("depositToPortal function", () => {
-        it("should successfully deposit to the portal if the balance is under threshold", async () => {
-            await escrow.connect(user1).depositToPortal()
+    describe("depositToGateway function", () => {
+        it("should successfully deposit to the gateway if the balance is under threshold", async () => {
+            await escrow.connect(user1).depositToGateway()
         })
 
-        it("should fail to deposit if the portal balance exceeds the threshold", async () => {
-            await escrow.connect(user1).depositToPortal()
-            await expect(escrow.connect(user1).depositToPortal()).to.be.revertedWith(
-                "Escrow: Portal balance exceeds the threshold"
+        it("should fail to deposit if the gateway balance exceeds the threshold", async () => {
+            await escrow.connect(user1).depositToGateway()
+            await expect(escrow.connect(user1).depositToGateway()).to.be.revertedWith(
+                "Escrow: Gateway balance exceeds the threshold"
             )
         })
 
         it("should deposit as much as possible if the escrow balance is under the required amount", async () => {
             await escrow.setThresholdAmount(3000)
-            await expect(escrow.connect(user1).depositToPortal())
-                .to.emit(escrow, "DepositToPortal")
+            await expect(escrow.connect(user1).depositToGateway())
+                .to.emit(escrow, "DepositToGateway")
                 .withArgs(1000, 3000)
         })
 
         it("should fail if the caller does not have DEPOSIT_ROLE", async () => {
-            await expect(escrow.connect(user2).depositToPortal()).to.be.reverted
+            await expect(escrow.connect(user2).depositToGateway()).to.be.reverted
         })
     })
 
-    describe("withdrawFromPortal function", () => {
-        it("should successfully withdraw from the portal if the balance is above threshold", async () => {
-            await escrow.connect(user1).depositToPortal()
+    describe("withdrawFromGateway function", () => {
+        it("should successfully withdraw from the gateway if the balance is above threshold", async () => {
+            await escrow.connect(user1).depositToGateway()
             await realToken.mint(await gateway.getAddress(), 500)
-            await escrow.connect(user1).withdrawFromPortal()
+            await escrow.connect(user1).withdrawFromGateway()
         })
 
-        it("should fail to withdraw if the portal balance is below the threshold", async () => {
-            await expect(escrow.connect(user1).withdrawFromPortal()).to.be.revertedWith(
-                "Escrow: Portal balance is below the threshold"
+        it("should fail to withdraw if the gateway balance is below the threshold", async () => {
+            await expect(escrow.connect(user1).withdrawFromGateway()).to.be.revertedWith(
+                "Escrow: Gateway balance is below the threshold"
             )
         })
 
         it("should fail if the caller does not have WITHDRAW_ROLE", async () => {
-            await expect(escrow.connect(user2).withdrawFromPortal()).to.be.revertedWith
+            await expect(escrow.connect(user2).withdrawFromGateway()).to.be.revertedWith
         })
     })
 

@@ -3,7 +3,7 @@ import {ethers} from "hardhat"
 import {Signer} from "ethers"
 
 describe("Gateway", () => {
-    let axlToken: any
+    let bridgedToken: any
     let realToken: any
     let gateway: any
     let recipient: Signer, user: Signer, owner: Signer
@@ -13,8 +13,8 @@ describe("Gateway", () => {
         ;[owner, user, recipient] = await ethers.getSigners()
 
         const TestToken = await ethers.getContractFactory("TestToken")
-        axlToken = await TestToken.deploy("AXL Token", "AXL")
-        await axlToken.waitForDeployment()
+        bridgedToken = await TestToken.deploy("Bridged Token", "BRG")
+        await bridgedToken.waitForDeployment()
 
         realToken = await TestToken.deploy("Real Token", "REAL")
         await realToken.waitForDeployment()
@@ -27,12 +27,12 @@ describe("Gateway", () => {
         await gateway.waitForDeployment()
         await gateway.addToken(
             await realToken.getAddress(),
-            await axlToken.getAddress()
+            await bridgedToken.getAddress()
         )
         tokenId = await gateway.tokensFromReal(await realToken.getAddress())
 
-        await axlToken.mint(await user.getAddress(), 1000)
-        await axlToken.mint(await gateway.getAddress(), 1000)
+        await bridgedToken.mint(await user.getAddress(), 1000)
+        await bridgedToken.mint(await gateway.getAddress(), 1000)
         await realToken.mint(await gateway.getAddress(), 1000)
         await realToken.mint(await user.getAddress(), 1000)
     })
@@ -45,8 +45,8 @@ describe("Gateway", () => {
 
             await gateway.connect(owner).grantRole(await gateway.UNPAUSER_ROLE(), await user.getAddress())
             await gateway.connect(user).unpause()
-            await axlToken.mint(await user.getAddress(), 1000)
-            await axlToken.connect(user).approve(await gateway.getAddress(), 1000)
+            await bridgedToken.mint(await user.getAddress(), 1000)
+            await bridgedToken.connect(user).approve(await gateway.getAddress(), 1000)
             await gateway.connect(user).swapToReal(tokenId, 1000) // Should succeed
         })
 
@@ -60,21 +60,21 @@ describe("Gateway", () => {
     })
 
     describe("swap functionality", () => {
-        it("should swap AXL to real tokens", async () => {
+        it("should swap bridged to real tokens", async () => {
             const beforeBalance: any = await realToken.balanceOf(await user.getAddress())
             const amount: any = 100
-            await axlToken.connect(user).approve(await gateway.getAddress(), amount)
+            await bridgedToken.connect(user).approve(await gateway.getAddress(), amount)
             await gateway.connect(user).swapToReal(tokenId, amount)
             const afterBalance: any = await realToken.balanceOf(await user.getAddress())
             expect(afterBalance - beforeBalance).to.equal(amount)
         })
 
-        it("should swap real to AXL tokens", async () => {
-            const beforeBalance: any = await axlToken.balanceOf(await user.getAddress())
+        it("should swap real to bridged tokens", async () => {
+            const beforeBalance: any = await bridgedToken.balanceOf(await user.getAddress())
             const amount: any = 100
             await realToken.connect(user).approve(await gateway.getAddress(), amount)
-            await gateway.connect(user).swapToAxl(tokenId, amount)
-            const afterBalance: any = await axlToken.balanceOf(await user.getAddress())
+            await gateway.connect(user).swapToBridged(tokenId, amount)
+            const afterBalance: any = await bridgedToken.balanceOf(await user.getAddress())
             expect(afterBalance - beforeBalance).to.equal(amount)
         })
 
@@ -82,14 +82,14 @@ describe("Gateway", () => {
             await expect(gateway.connect(user).swapToReal(tokenId, 0)).to.be.revertedWith(
                 "Gateway: AMOUNT_MUST_BE_GREATER_THAN_0"
             )
-            await expect(gateway.connect(user).swapToAxl(tokenId, 0)).to.be.revertedWith(
+            await expect(gateway.connect(user).swapToBridged(tokenId, 0)).to.be.revertedWith(
                 "Gateway: AMOUNT_MUST_BE_GREATER_THAN_0"
             )
         })
 
         it("should not allow swapping to a zero address", async () => {
             const amount = 100
-            await axlToken.connect(user).approve(await gateway.getAddress(), amount)
+            await bridgedToken.connect(user).approve(await gateway.getAddress(), amount)
             await expect(gateway.connect(user).swapToRealTo(tokenId, amount, ethers.ZeroAddress)).to.be.revertedWith(
                 "Gateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO"
             )
@@ -98,14 +98,14 @@ describe("Gateway", () => {
         it("should not allow swapping to a zero address", async () => {
             const amount = 100
             await realToken.connect(user).approve(await gateway.getAddress(), amount)
-            await expect(gateway.connect(user).swapToAxlTo(tokenId, amount, ethers.ZeroAddress)).to.be.revertedWith(
+            await expect(gateway.connect(user).swapToBridgedTo(tokenId, amount, ethers.ZeroAddress)).to.be.revertedWith(
                 "Gateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO"
             )
         })
 
         it("should not allow swapping if contract has insufficient balance", async () => {
             const amount = 10000
-            await axlToken.connect(user).approve(await gateway.getAddress(), amount)
+            await bridgedToken.connect(user).approve(await gateway.getAddress(), amount)
             await expect(gateway.connect(user).swapToReal(tokenId, amount)).to.be.reverted
         })
     })
@@ -127,27 +127,27 @@ describe("Gateway", () => {
         it("should withdraw and update user balance", async () => {
             const userAddress = await user.getAddress()
             await realToken.connect(user).approve(await gateway.getAddress(), 2000)
-            await axlToken.connect(user).approve(await gateway.getAddress(), 2000)
+            await bridgedToken.connect(user).approve(await gateway.getAddress(), 2000)
             await gateway.connect(user).deposit(tokenId, 1000, 500)
             await gateway.connect(user).withdraw(tokenId, 500, 200)
 
             expect(await gateway.deposits(tokenId, userAddress)).to.equal(800)
             expect(await realToken.balanceOf(userAddress)).to.equal(500)
-            expect(await axlToken.balanceOf(userAddress)).to.equal(700)
+            expect(await bridgedToken.balanceOf(userAddress)).to.equal(700)
 
             await gateway.connect(user).deposit(tokenId, 0, 100)
             await gateway.connect(user).withdraw(tokenId, 0, 100)
 
             expect(await gateway.deposits(tokenId, userAddress)).to.equal(800)
             expect(await realToken.balanceOf(userAddress)).to.equal(500)
-            expect(await axlToken.balanceOf(userAddress)).to.equal(700)
+            expect(await bridgedToken.balanceOf(userAddress)).to.equal(700)
 
             await gateway.connect(user).deposit(tokenId, 100, 0)
             await gateway.connect(user).withdraw(tokenId, 100, 0)
 
             expect(await gateway.deposits(tokenId, userAddress)).to.equal(800)
             expect(await realToken.balanceOf(userAddress)).to.equal(500)
-            expect(await axlToken.balanceOf(userAddress)).to.equal(700)
+            expect(await bridgedToken.balanceOf(userAddress)).to.equal(700)
         })
         it("should not allow withdrawing with zero amount", async () => {
             await expect(gateway.connect(user).withdraw(tokenId, 0, 0)).to.be.revertedWith(
