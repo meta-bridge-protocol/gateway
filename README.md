@@ -1,4 +1,4 @@
-# Axelar Port
+# Gateway
 
 ```shell
 npx hardhat test
