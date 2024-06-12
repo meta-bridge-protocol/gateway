@@ -9,19 +9,19 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 
 /// @title Gateway
 /// @author DEUS Finance
-/// @notice This contract allows users to swap "axl" prefixed tokens to real tokens and vice versa.
+/// @notice This contract allows users to swap bridged tokens to real tokens and vice versa.
 contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
     using SafeERC20 for IERC20;
 
     enum SwapType {
         TO_REAL,
-        TO_AXL
+        TO_BRIDGED
     }
 
     struct Token {
         uint16 id;
         address realToken;
-        address axlToken;
+        address bridgedToken;
         bool active;
     }
 
@@ -35,7 +35,7 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
     mapping(uint16 => mapping(address => uint256)) public deposits;
 
     mapping(address => uint16) public tokensFromReal;
-    mapping(address => uint16) public tokensFromAxl;
+    mapping(address => uint16) public tokensFromBridged;
 
     /// @notice Event to log the successful token swap.
     /// @param from The address that initiated the swap.
@@ -54,12 +54,12 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
     /// @param user The address of the user who deposited.
     /// @param tokenId The token deposited to.
     /// @param realTokenAmount The amount of real tokens deposited.
-    /// @param axlTokenAmount The amount of axl prefixed tokens deposited.
+    /// @param bridgedTokenAmount The amount of bridged tokens deposited.
     event Deposited(
         address indexed user,
         uint16 tokenId,
         uint256 realTokenAmount,
-        uint256 axlTokenAmount
+        uint256 bridgedTokenAmount
     );
 
 
@@ -67,12 +67,12 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
     /// @param user The address of the user who withdrew.
     /// @param tokenId The token withdrawn from.
     /// @param realTokenAmount The amount of real tokens withdrawn.
-    /// @param axlTokenAmount The amount of axl prefixed tokens withdrawn.
+    /// @param bridgedTokenAmount The amount of bridged tokens withdrawn.
     event Withdrawn(
         address indexed user,
         uint16 tokenId,
         uint256 realTokenAmount,
-        uint256 axlTokenAmount
+        uint256 bridgedTokenAmount
     );
 
     /// @notice Constructs a new Gateway contract.
@@ -94,31 +94,31 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         return tokens[tokenId];
     }
 
-    /// @notice Get a Token info via its axl token address.
-    /// @param axlToken The address of the axl prefixed token.
+    /// @notice Get a Token info via its bridged token address.
+    /// @param bridgedToken The address of the bridged token.
     /// @return Token info
-    function getTokenViaAxl(address axlToken) external view returns (Token memory) {
-        uint16 tokenId = tokensFromAxl[axlToken];
+    function getTokenViaBridged(address bridgedToken) external view returns (Token memory) {
+        uint16 tokenId = tokensFromBridged[bridgedToken];
         return tokens[tokenId];
     }
 
     /// @notice Add a new Token. Can only calls by an address with OPERATOR_ROLE.
     /// @param realToken The address of the corresponding real token.
-    /// @param axlToken The address of the axl prefixed token.
+    /// @param bridgedToken The address of the bridged token.
     /// @return tokenId The ID of the new added token.
     function addToken(
         address realToken,
-        address axlToken
+        address bridgedToken
     ) external onlyRole(OPERATOR_ROLE) returns (uint16 tokenId) {
-        require(axlToken != address(0), "Gateway: AXL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
+        require(bridgedToken != address(0), "Gateway: BRIDGED_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
         require(realToken != address(0), "Gateway: REAL_TOKEN_ADDRESS_MUST_BE_NON-ZERO");
         require(tokensFromReal[realToken] == 0, "Gateway: DUPLICATE_REAL_TOKEN");
-        require(tokensFromAxl[axlToken] == 0, "Gateway: DUPLICATE_AXL_TOKEN");
+        require(tokensFromBridged[bridgedToken] == 0, "Gateway: DUPLICATE_BRIDGED_TOKEN");
 
         tokenId = ++lastTokenId;
-        tokens[tokenId] = Token(tokenId, realToken, axlToken, true);
+        tokens[tokenId] = Token(tokenId, realToken, bridgedToken, true);
         tokensFromReal[realToken] = tokenId;
-        tokensFromAxl[axlToken] = tokenId;
+        tokensFromBridged[bridgedToken] = tokenId;
     }
 
     /// @notice Remove an existing Token. Can only calls by an address with OPERATOR_ROLE.
@@ -129,7 +129,7 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         require(tokenId != 0 && tokens[tokenId].id == tokenId, "Gateway: INVALID_TOKEN");
 
         delete tokensFromReal[tokens[tokenId].realToken];
-        delete tokensFromAxl[tokens[tokenId].axlToken];
+        delete tokensFromBridged[tokens[tokenId].bridgedToken];
         delete tokens[tokenId];
     }
 
@@ -145,9 +145,9 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         tokens[tokenId].active = active;
     }
 
-    /// @notice Swaps a specified amount of "axl" prefixed tokens to real tokens.
+    /// @notice Swaps a specified amount of bridged tokens to real tokens.
     /// @param tokenId The token to swap.
-    /// @param amount The amount of "axl" prefixed tokens to swap.
+    /// @param amount The amount of bridged tokens to swap.
     function swapToReal(
         uint16 tokenId,
         uint256 amount
@@ -155,19 +155,19 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         _swap(tokenId, amount, msg.sender, SwapType.TO_REAL);
     }
 
-    /// @notice Swaps a specified amount of real tokens to "axl" prefixed tokens.
+    /// @notice Swaps a specified amount of real tokens to bridged tokens.
     /// @param tokenId The token to swap.
     /// @param amount The amount of real tokens to swap.
-    function swapToAxl(
+    function swapToBridged(
         uint16 tokenId,
         uint256 amount
     ) external nonReentrant whenNotPaused {
-        _swap(tokenId, amount, msg.sender, SwapType.TO_AXL);
+        _swap(tokenId, amount, msg.sender, SwapType.TO_BRIDGED);
     }
 
-    /// @notice Swaps a specified amount of "axl" prefixed tokens to real tokens.
+    /// @notice Swaps a specified amount of bridged tokens to real tokens.
     /// @param tokenId The token to swap.
-    /// @param amount The amount of "axl" prefixed tokens to swap.
+    /// @param amount The amount of bridged tokens to swap.
     /// @param to The recipient address of the real tokens.
     function swapToRealTo(
         uint16 tokenId,
@@ -177,23 +177,23 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         _swap(tokenId, amount, to, SwapType.TO_REAL);
     }
 
-    /// @notice Swaps a specified amount of real tokens to "axl" prefixed tokens.
+    /// @notice Swaps a specified amount of real tokens to bridged tokens.
     /// @param tokenId The token to swap.
     /// @param amount The amount of real tokens to swap.
-    /// @param to The recipient address of the "axl" prefixed tokens.
-    function swapToAxlTo(
+    /// @param to The recipient address of the bridged tokens.
+    function swapToBridgedTo(
         uint16 tokenId,
         uint256 amount,
         address to
     ) external nonReentrant whenNotPaused {
-        _swap(tokenId, amount, to, SwapType.TO_AXL);
+        _swap(tokenId, amount, to, SwapType.TO_BRIDGED);
     }
 
     /// @dev Internal function to handle the token swap.
     /// @param tokenId The token to swap.
     /// @param amount The amount of tokens to swap.
     /// @param to The recipient address of the swapped tokens.
-    /// @param type_ The swap type (TO_REAL or TO_AXL).
+    /// @param type_ The swap type (TO_REAL or TO_BRIDGED).
     function _swap(
         uint16 tokenId,
         uint256 amount,
@@ -208,11 +208,11 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
 
         address fromToken;
         address toToken;
-        if (type_ == SwapType.TO_AXL) {
+        if (type_ == SwapType.TO_BRIDGED) {
             fromToken = token.realToken;
-            toToken = token.axlToken;
+            toToken = token.bridgedToken;
         } else {
-            fromToken = token.axlToken;
+            fromToken = token.bridgedToken;
             toToken = token.realToken;
         }
 
@@ -222,16 +222,16 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         emit TokenSwapped(msg.sender, to, fromToken, toToken, amount);
     }
 
-    /// @notice Allows users to deposit both real tokens and "axl" prefixed tokens.
+    /// @notice Allows users to deposit both real tokens and bridged tokens.
     /// @param tokenId The token to deposit to.
     /// @param realTokenAmount The amount of real tokens to deposit.
-    /// @param axlTokenAmount The amount of "axl" prefixed tokens to deposit.
+    /// @param bridgedTokenAmount The amount of bridged tokens to deposit.
     function deposit(
         uint16 tokenId,
         uint256 realTokenAmount,
-        uint256 axlTokenAmount
+        uint256 bridgedTokenAmount
     ) external nonReentrant whenNotPaused {
-        require(realTokenAmount + axlTokenAmount > 0, "Gateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0");
+        require(realTokenAmount + bridgedTokenAmount > 0, "Gateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0");
 
         Token memory token = tokens[tokenId];
         require(token.active, "Gateway: INACTIVE_TOKEN");
@@ -239,25 +239,25 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         if (realTokenAmount > 0) {
             IERC20(token.realToken).safeTransferFrom(msg.sender, address(this), realTokenAmount);
         }
-        if (axlTokenAmount > 0) {
-            IERC20(token.axlToken).safeTransferFrom(msg.sender, address(this), axlTokenAmount);
+        if (bridgedTokenAmount > 0) {
+            IERC20(token.bridgedToken).safeTransferFrom(msg.sender, address(this), bridgedTokenAmount);
         }
 
-        deposits[tokenId][msg.sender] += realTokenAmount + axlTokenAmount;
+        deposits[tokenId][msg.sender] += realTokenAmount + bridgedTokenAmount;
 
-        emit Deposited(msg.sender, tokenId, realTokenAmount, axlTokenAmount);
+        emit Deposited(msg.sender, tokenId, realTokenAmount, bridgedTokenAmount);
     }
 
-    /// @notice Allows users to withdraw both real tokens and "axl" prefixed tokens.
+    /// @notice Allows users to withdraw both real tokens and bridged tokens.
     /// @param tokenId The token to withdraw from.
     /// @param realTokenAmount The amount of real tokens to withdraw.
-    /// @param axlTokenAmount The amount of "axl" prefixed tokens to withdraw.
+    /// @param bridgedTokenAmount The amount of bridged tokens to withdraw.
     function withdraw(
         uint16 tokenId,
         uint256 realTokenAmount,
-        uint256 axlTokenAmount
+        uint256 bridgedTokenAmount
     ) external nonReentrant whenNotPaused {
-        uint256 totalWithdrawal = realTokenAmount + axlTokenAmount;
+        uint256 totalWithdrawal = realTokenAmount + bridgedTokenAmount;
         require(totalWithdrawal > 0, "Gateway: TOTAL_WITHDRAWAL_MUST_BE_GREATER_THAN_0");
         require(deposits[tokenId][msg.sender] >= totalWithdrawal, "Gateway: INSUFFICIENT_USER_BALANCE");
 
@@ -268,11 +268,11 @@ contract Gateway is ReentrancyGuard, AccessControlEnumerable, Pausable {
         if (realTokenAmount > 0) {
             IERC20(token.realToken).safeTransfer(msg.sender, realTokenAmount);
         }
-        if (axlTokenAmount > 0) {
-            IERC20(token.axlToken).safeTransfer(msg.sender, axlTokenAmount);
+        if (bridgedTokenAmount > 0) {
+            IERC20(token.bridgedToken).safeTransfer(msg.sender, bridgedTokenAmount);
         }
 
-        emit Withdrawn(msg.sender, tokenId, realTokenAmount, axlTokenAmount);
+        emit Withdrawn(msg.sender, tokenId, realTokenAmount, bridgedTokenAmount);
     }
 
     /// @notice Pauses the contract.
