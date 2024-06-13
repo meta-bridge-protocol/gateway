@@ -56,4 +56,4 @@ npx hardhat verify --network <network-name> <contract-address> <constructor-argu
 ```
 
 ## License
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
