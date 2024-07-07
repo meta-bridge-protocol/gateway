@@ -56,7 +56,7 @@ const config: HardhatUserConfig = {
             url: `https://ethereum.publicnode.com`,
             accounts: accounts
         },
-        bsc: {
+        bnb: {
             url: `https://bsc.rpc.blxrbdn.com`,
             accounts: accounts
         },
@@ -86,6 +86,10 @@ const config: HardhatUserConfig = {
         },
         base: {
             url: `https://base.llamarpc.com`,
+            accounts: accounts
+        },
+        bnb_test: {
+            url: `https://bsc-testnet-rpc.publicnode.com`,
             accounts: accounts
         }
     },
