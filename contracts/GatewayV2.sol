@@ -8,20 +8,19 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 /// @title GatewayV2
-/// @author DEUS Finance
-/// @notice This contract allows users to swap bridged tokens to real tokens and vice versa.
+/// @notice This contract allows users to swap mb tokens to native tokens and vice versa.
 contract GatewayV2 is ReentrancyGuard, AccessControlEnumerable, Pausable {
 	using SafeERC20 for IERC20;
 
 	enum SwapType {
-		TO_REAL,
-		TO_BRIDGED
+		TO_NATIVE,
+		TO_MBTOKEN
 	}
 
 	bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
-	address public realToken;
-	address public bridgedToken;
+	address public nativeToken;
+	address public mbToken;
 
 	mapping(address => uint256) public deposits;
 
@@ -41,85 +40,85 @@ contract GatewayV2 is ReentrancyGuard, AccessControlEnumerable, Pausable {
 
 	/// @notice Event to log the successful deposit of tokens.
 	/// @param user The address of the user who deposited.
-	/// @param realTokenAmount The amount of real tokens deposited.
-	event Deposited(address indexed user, uint256 realTokenAmount);
+	/// @param nativeTokenAmount The amount of native tokens deposited.
+	event Deposited(address indexed user, uint256 nativeTokenAmount);
 
 	/// @notice Event to log the successful withdrawal of tokens.
 	/// @param user The address of the user who withdrew.
-	/// @param realTokenAmount The amount of real tokens withdrawn.
-	/// @param bridgedTokenAmount The amount of bridged tokens withdrawn.
-	event Withdrawn(address indexed user, uint256 realTokenAmount, uint256 bridgedTokenAmount);
+	/// @param nativeTokenAmount The amount of native tokens withdrawn.
+	/// @param mbTokenAmount The amount of mb tokens withdrawn.
+	event Withdrawn(address indexed user, uint256 nativeTokenAmount, uint256 mbTokenAmount);
 
 	/// @notice Constructs a new GatewayV2 contract.
-	constructor(address _admin, address _realToken, address _bridgedToken) {
+	constructor(address _admin, address _nativeToken, address _mbToken) {
 		require(_admin != address(0), "Gateway: ADMIN_ADDRESS_MUST_BE_NON-ZERO");
 
 		_grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
-		realToken = _realToken;
-		bridgedToken = _bridgedToken;
+		nativeToken = _nativeToken;
+		mbToken = _mbToken;
 	}
 
-	/// @notice Swaps a specified amount of bridged tokens to real tokens.
-	/// @param amount The amount of bridged tokens to swap.
-	function swapToReal(uint256 amount) external nonReentrant whenNotPaused {
-		_swap(amount, msg.sender, SwapType.TO_REAL);
+	/// @notice Swaps a specified amount of mb tokens to native tokens.
+	/// @param amount The amount of mb tokens to swap.
+	function swapToNative(uint256 amount) external nonReentrant whenNotPaused {
+		_swap(amount, msg.sender, SwapType.TO_NATIVE);
 	}
 
-	/// @notice Swaps a specified amount of real tokens to bridged tokens.
-	/// @param amount The amount of real tokens to swap.
-	function swapToBridged(uint256 amount) external nonReentrant whenNotPaused {
-		_swap(amount, msg.sender, SwapType.TO_BRIDGED);
+	/// @notice Swaps a specified amount of native tokens to mb tokens.
+	/// @param amount The amount of native tokens to swap.
+	function swapToMBToken(uint256 amount) external nonReentrant whenNotPaused {
+		_swap(amount, msg.sender, SwapType.TO_MBTOKEN);
 	}
 
-	/// @notice Swaps a specified amount of bridged tokens to real tokens.
-	/// @param amount The amount of bridged tokens to swap.
-	/// @param to The recipient address of the real tokens.
-	function swapToRealTo(uint256 amount, address to) external nonReentrant whenNotPaused {
-		_swap(amount, to, SwapType.TO_REAL);
+	/// @notice Swaps a specified amount of mb tokens to native tokens.
+	/// @param amount The amount of mb tokens to swap.
+	/// @param to The recipient address of the native tokens.
+	function swapToNativeTo(uint256 amount, address to) external nonReentrant whenNotPaused {
+		_swap(amount, to, SwapType.TO_NATIVE);
 	}
 
-	/// @notice Swaps a specified amount of real tokens to bridged tokens.
-	/// @param amount The amount of real tokens to swap.
-	/// @param to The recipient address of the bridged tokens.
-	function swapToBridgedTo(uint256 amount, address to) external nonReentrant whenNotPaused {
-		_swap(amount, to, SwapType.TO_BRIDGED);
+	/// @notice Swaps a specified amount of native tokens to mb tokens.
+	/// @param amount The amount of native tokens to swap.
+	/// @param to The recipient address of the mb tokens.
+	function swapToMBTokenTo(uint256 amount, address to) external nonReentrant whenNotPaused {
+		_swap(amount, to, SwapType.TO_MBTOKEN);
 	}
 
-	/// @notice Allows users to deposit real tokens.
-	/// @param realTokenAmount The amount of real tokens to deposit.
-	function deposit(uint256 realTokenAmount) external nonReentrant whenNotPaused {
-		require(realTokenAmount > 0, "Gateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0");
+	/// @notice Allows users to deposit native tokens.
+	/// @param nativeTokenAmount The amount of native tokens to deposit.
+	function deposit(uint256 nativeTokenAmount) external nonReentrant whenNotPaused {
+		require(nativeTokenAmount > 0, "Gateway: TOTAL_DEPOSIT_MUST_BE_GREATER_THAN_0");
 
-		uint256 balance = IERC20(realToken).balanceOf(address(this));
+		uint256 balance = IERC20(nativeToken).balanceOf(address(this));
 
-		IERC20(realToken).safeTransferFrom(msg.sender, address(this), realTokenAmount);
+		IERC20(nativeToken).safeTransferFrom(msg.sender, address(this), nativeTokenAmount);
 
-		uint256 receivedAmount = IERC20(realToken).balanceOf(address(this)) - balance;
-		require(realTokenAmount == receivedAmount, "Gateway: INVALID_RECEIVED_AMOUNT");
+		uint256 receivedAmount = IERC20(nativeToken).balanceOf(address(this)) - balance;
+		require(nativeTokenAmount == receivedAmount, "Gateway: INVALID_RECEIVED_AMOUNT");
 
-		deposits[msg.sender] += realTokenAmount;
+		deposits[msg.sender] += nativeTokenAmount;
 
-		emit Deposited(msg.sender, realTokenAmount);
+		emit Deposited(msg.sender, nativeTokenAmount);
 	}
 
-	/// @notice Allows users to withdraw both real tokens and bridged tokens.
-	/// @param realTokenAmount The amount of real tokens to withdraw.
-	/// @param bridgedTokenAmount The amount of bridged tokens to withdraw.
-	function withdraw(uint256 realTokenAmount, uint256 bridgedTokenAmount) external nonReentrant whenNotPaused {
-		uint256 totalWithdrawal = realTokenAmount + bridgedTokenAmount;
+	/// @notice Allows users to withdraw both native tokens and mb tokens.
+	/// @param nativeTokenAmount The amount of native tokens to withdraw.
+	/// @param mbTokenAmount The amount of mb tokens to withdraw.
+	function withdraw(uint256 nativeTokenAmount, uint256 mbTokenAmount) external nonReentrant whenNotPaused {
+		uint256 totalWithdrawal = nativeTokenAmount + mbTokenAmount;
 		require(totalWithdrawal > 0, "Gateway: TOTAL_WITHDRAWAL_MUST_BE_GREATER_THAN_0");
 		require(deposits[msg.sender] >= totalWithdrawal, "Gateway: INSUFFICIENT_USER_BALANCE");
 
 		deposits[msg.sender] -= totalWithdrawal;
-		if (realTokenAmount > 0) {
-			IERC20(realToken).safeTransfer(msg.sender, realTokenAmount);
+		if (nativeTokenAmount > 0) {
+			IERC20(nativeToken).safeTransfer(msg.sender, nativeTokenAmount);
 		}
-		if (bridgedTokenAmount > 0) {
-			IERC20(bridgedToken).safeTransfer(msg.sender, bridgedTokenAmount);
+		if (mbTokenAmount > 0) {
+			IERC20(mbToken).safeTransfer(msg.sender, mbTokenAmount);
 		}
 
-		emit Withdrawn(msg.sender, realTokenAmount, bridgedTokenAmount);
+		emit Withdrawn(msg.sender, nativeTokenAmount, mbTokenAmount);
 	}
 
 	/// @notice Pauses the contract.
@@ -135,19 +134,19 @@ contract GatewayV2 is ReentrancyGuard, AccessControlEnumerable, Pausable {
 	/// @dev Internal function to handle the token swap.
 	/// @param amount_ The amount of tokens to swap.
 	/// @param to_ The recipient address of the swapped tokens.
-	/// @param type_ The swap type (TO_REAL or TO_BRIDGED).
+	/// @param type_ The swap type (TO_NATIVE or TO_MBTOKEN).
 	function _swap(uint256 amount_, address to_, SwapType type_) internal {
 		require(amount_ > 0, "Gateway: AMOUNT_MUST_BE_GREATER_THAN_0");
 		require(to_ != address(0), "Gateway: RECIPIENT_ADDRESS_MUST_BE_NON-ZERO");
 
 		address fromToken;
 		address toToken;
-		if (type_ == SwapType.TO_BRIDGED) {
-			fromToken = realToken;
-			toToken = bridgedToken;
-		} else if (type_ == SwapType.TO_REAL) {
-			fromToken = bridgedToken;
-			toToken = realToken;
+		if (type_ == SwapType.TO_MBTOKEN) {
+			fromToken = nativeToken;
+			toToken = mbToken;
+		} else if (type_ == SwapType.TO_NATIVE) {
+			fromToken = mbToken;
+			toToken = nativeToken;
 		} else {
 			revert("Invalid SwapType");
 		}
