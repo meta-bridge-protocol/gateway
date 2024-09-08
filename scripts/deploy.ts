@@ -48,4 +48,28 @@ async function deployEscrow(
     return escrow
 }
 
-export {deployGateway, deployEscrow}
+async function deployEscrowV2(
+    gateway: string,
+    msig: string,
+    thresholdAmount: string,
+    deployer: string,
+    verify: boolean = true
+) {
+    const factory = await ethers.getContractFactory("EscrowV2", {
+        signer: await ethers.getSigner(deployer)
+    })
+    const escrow = await upgrades.deployProxy(factory, [gateway, msig, thresholdAmount])
+    await escrow.waitForDeployment()
+    if (verify)
+        try {
+            await hre.run("verify:verify", {
+                address: await escrow.getAddress(),
+                constructorArguments: [gateway, msig, thresholdAmount]
+            })
+        } catch {
+            console.log("Failed to verify")
+        }
+    return escrow
+}
+
+export {deployGateway, deployEscrow, deployEscrowV2}
